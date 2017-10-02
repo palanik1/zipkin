@@ -3,14 +3,19 @@ CREATE KEYSPACE IF NOT EXISTS stress_zipkin3 WITH replication = {'class': 'Simpl
 //-- same schema but remove all UDTs (as cassandra-stress doesn't support them)
 
 CREATE TABLE IF NOT EXISTS stress_zipkin3.traces (
-    trace_id            bigint,
+    trace_id            text,
     ts_uuid             timeuuid,
-    id                  bigint,
+    id                  text,
     ts                  bigint,
-    span_name           text,
+    span                text,
     parent_id           bigint,
     duration            bigint,
-    all_annotations     text, //-- can't do SASI on set<text>: comma-joined until CASSANDRA-11182
+    l_ep                Endpoint,
+    l_service           text,
+    r_rp                Endpoint,
+    tags                map<text,text>,
+    shared              boolean,
+    annotation_query    text, //-- can't do SASI on set<text>: comma-joined until CASSANDRA-11182
     PRIMARY KEY (trace_id, ts_uuid, id)
 )
     WITH CLUSTERING ORDER BY (ts_uuid DESC)
@@ -19,22 +24,22 @@ CREATE TABLE IF NOT EXISTS stress_zipkin3.traces (
 
 
 CREATE TABLE IF NOT EXISTS stress_zipkin3.trace_by_service_span (
-    service_name  text,             //-- service name
-    span_name     text,             //-- span name, or blank for queries without span name
+    service       text,             //-- service name
+    span          text,             //-- span name, or blank for queries without span name
     bucket        int,              //-- time bucket, calculated as ts/interval (in microseconds), for some pre-configured interval like 1 day.
     ts            timeuuid,         //-- start timestamp of the span, truncated to millisecond precision
     trace_id      bigint,           //-- trace ID
     duration      bigint,           //-- span duration, in microseconds
-    PRIMARY KEY ((service_name, span_name, bucket), ts)
+    PRIMARY KEY ((service, span, bucket), ts)
 )
    WITH CLUSTERING ORDER BY (ts DESC)
     AND compaction = {'class': 'org.apache.cassandra.db.compaction.TimeWindowCompactionStrategy'}
     AND default_time_to_live =  259200;
 
-CREATE TABLE IF NOT EXISTS stress_zipkin3.span_name_by_service (
-    service_name text,
-    span_name    text,
-    PRIMARY KEY (service_name, span_name)
+CREATE TABLE IF NOT EXISTS stress_zipkin3.span_by_service (
+    service text,
+    span    text,
+    PRIMARY KEY (service, span)
 )
     WITH compaction = {'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy', 'unchecked_tombstone_compaction': 'true', 'tombstone_threshold': '0.2'}
     AND default_time_to_live =  259200;

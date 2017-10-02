@@ -47,7 +47,7 @@ columnspec:
     size: fixed(12)
     population: uniform(1..10k)
 
-  - name: span_name
+  - name: span
     size: uniform(5..20)
     population: uniform(1..100)
 
